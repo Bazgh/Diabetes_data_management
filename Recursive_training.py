@@ -74,23 +74,3 @@ print("Validation MSE:", mse)
 
 
 
-import matplotlib.pyplot as plt
-
-
-# pick one test sample
-i = 0
-y_true = Y_val[i]
-y_pred = Y_pred[i]
-
-plt.figure(figsize=(6,4))
-plt.plot(range(1, len(y_true)+1), y_true, 'o-', label='Ground Truth')
-plt.plot(range(1, len(y_pred)+1), y_pred, 's--', label='Prediction')
-plt.xlabel("Prediction step (5-min intervals)")
-plt.ylabel("Normalized CBG")
-plt.title("Linear Regression — 6-step Prediction Example")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-rmse = np.sqrt(mean_squared_error(Y_val, Y_pred))
-r2 = r2_score(Y_val, Y_pred)
