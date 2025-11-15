@@ -20,8 +20,8 @@ class TimeSeriesWindowDataset(Dataset):
         self,
         root_dir,
         split="train",
-        input_len=24,
-        pred_len=1,
+        input_len=36,
+        pred_len=6,
         stride=5,
         max_missing_length=12,   # in steps (12*5min = 60min)
         normalize=True,
@@ -146,37 +146,37 @@ class TimeSeriesWindowDataset(Dataset):
 
 
 #instantiate the class and build the data
-
-train_dataset1 = TimeSeriesWindowDataset(
+# dataset for predicting 30 minutes ahead
+train_dataset1_30 = TimeSeriesWindowDataset(
     root_dir="data/Ohio2018_processed",        # path to your main folder
     split="train",          # or "val" or "test"
-    input_len=24,           # past 100 minutes (20 * 5min)
-    pred_len=1,             # predict next 30 minutes
+    input_len=36,           # past 100 minutes (20 * 5min)
+    pred_len=6,             # predict next 30 minutes
     stride=1,               # slide by 25 minutes
     max_missing_length=12,  # skip if >60 minutes missing
     normalize=False,         # per-file normalization
     ewma_span=8             # smoothing parameter
 )
-train_dataset2 = TimeSeriesWindowDataset(
+train_dataset2_30 = TimeSeriesWindowDataset(
     root_dir="data/Ohio2018_processed",        # path to your main folder
     split="test",          # or "val" or "test"
-    input_len=24,           # past 100 minutes (20 * 5min)
-    pred_len=1,             # predict next 30 minutes
+    input_len=36,           # past 100 minutes (20 * 5min)
+    pred_len=6,             # predict next 30 minutes
     stride=1,               # slide by 25 minutes
     max_missing_length=12,  # skip if >60 minutes missing
     normalize=False,         # per-file normalization
     ewma_span=8             # smoothing parameter
 )
-train_dataset = ConcatDataset([train_dataset1, train_dataset2])
+train_dataset_30 = ConcatDataset([train_dataset1_30, train_dataset2_30])
 
 # ---- STEP 2: compute global stats from *raw* training data ----
 # Concatenate tensors from underlying datasets
 X = np.concatenate(
-    [train_dataset1.X.numpy(), train_dataset2.X.numpy()],
+    [train_dataset1_30.X.numpy(), train_dataset2_30.X.numpy()],
     axis=0
 )
 Y = np.concatenate(
-    [train_dataset1.Y.numpy(), train_dataset2.Y.numpy()],
+    [train_dataset1_30.Y.numpy(), train_dataset2_30.Y.numpy()],
     axis=0
 )
 
@@ -189,8 +189,9 @@ print("Training std:", std)
 
 # STEP 3 — Save global stats
 np.savez("global_train_stats.npz", mean=mean, std=std)
+
 """
-# Extract tensors
+# Extract tensors (At inference time)
 X = test_dataset.X.numpy()
 Y = test_dataset.Y.numpy()
 #Apply global normalization
@@ -202,6 +203,6 @@ std  = stats["std"]    # scalar
 X_norm = (X - mean) / std
 Y_norm = (Y - mean) / std
 # STEP 5 — Save normalized dataset
-save_path = "data/Ohio2018_processed/train_dataset_2018.pt"
+save_path = "data/Ohio2018_processed/train_dataset_30.pt"
 torch.save({"X": torch.tensor(X_norm), "Y": torch.tensor(Y_norm)}, save_path)
-print("Saved normalized test dataset:", save_path)
+print("Saved normalized train_30 dataset:", save_path)
