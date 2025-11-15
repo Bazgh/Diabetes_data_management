@@ -38,23 +38,39 @@ save_path = "linear_regression_model.pkl"
 joblib.dump(model1, save_path)
 
 print(f"Linear regression model saved to: {save_path}")
-# Evaluate
-Y_pred = model1.predict(X_val)
-input_len=36
-pred_len=1
-x=[]
-y_true=[]
-y_pred=[]
-x[0]=X_val[0]
-y_true[0]=Y_val[0]
+# --------- EVALUATION (recursive) ---------
 
-for i in range(1,len(X_val)):
-    y_pred[i-1] = model1.predict(x[i-1])
-    #pass the prediction to the input
-    x[i]=np.concatenate(x[i:],y_pred[i-1])
+# create containers with fixed length
+n_val = len(X_val)
+x = [None] * n_val        # will store input windows
+y_true = [None] * n_val   # ground truth outputs
+y_pred = [None] * n_val   # predictions
 
+# initialise first window and true value
+x[0] = X_val[0].copy()
+y_true[0] = Y_val[0]
 
+for i in range(1, n_val):
+    # predict from previous window
+    y_pred[i-1] = model1.predict(x[i-1].reshape(1, -1))[0]  # <-- reshape + [0]
 
+    # build next input window by shifting and appending prediction
+    # assumes X windows are 1D: shape (window_len,)
+    x[i] = np.concatenate([x[i-1][1:], np.atleast_1d(y_pred[i-1])])  # <-- fixed concatenate
+
+    # store true target for this step
+    y_true[i] = Y_val[i]
+
+# make prediction for the last window as well
+y_pred[-1] = model1.predict(x[-1].reshape(1, -1))[0]
+
+# convert to numpy arrays
+y_true = np.array(y_true)
+y_pred = np.array(y_pred)
+
+# compute MSE
+mse = mean_squared_error(y_true, y_pred)  # <-- np.msre -> mean_squared_error
+print("Validation MSE:", mse)
 
 
 
