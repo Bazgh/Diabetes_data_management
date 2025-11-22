@@ -74,3 +74,9 @@ X_val   = pairs.X_val
 Y_val   = pairs.Y_val
 
 print(X_train.shape, Y_train.shape, X_val.shape, Y_val.shape)
+
+#todo
+#trainloader
+#valloader
+
+#def training loop
