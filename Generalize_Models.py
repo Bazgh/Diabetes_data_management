@@ -20,50 +20,21 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from torch.utils.data import DataLoader
 import joblib
+import ast
+dir = "generalised/generalised/train.csv"  # adjust this to your dir please
+data = pd.read_csv(dir)
+# Convert string to Python list
+data["X"] = data["X"].apply(lambda x: ast.literal_eval(x))
 
-dir = "train-data/train"  # adjust this to your dir please
+# Convert list column to NumPy array
+X = np.array(data["X"].tolist())
+Y = np.array(data.iloc[:, -1].values)
 
+# split them into train and val
+X_train, X_val, Y_train, Y_val = train_test_split(
+    X, Y, test_size=0.33, random_state=42
+)
 
-def create_train_val_pairs(dir, train_ratio):
-    # load files
-    files_list = []
-    X_train = []
-    Y_train = []
-    X_val = []
-    Y_val = []
-    for file in glob.glob(dir + "/*.csv"):
-        files_list.append(file)
-    # shuffle them and split them into train and val
-    random.seed(42)
-    random.shuffle(files_list)
-    N = len(files_list)
-    train_len = int(N * train_ratio)
-    train_files = files_list[:train_len]
-    val_files = files_list[train_len:]
-
-    # fill in the train and val arrays
-    # TODO: Make me a func
-    for file in train_files:
-        df = pd.read_csv(file)
-        X = [eval(item) for item in df["X"].values]
-        X_train.extend(X)
-        Y_train.extend(df["y"])
-    X_train = np.array(X_train)  # shape: (total_rows, num_features)
-    Y_train = np.array(Y_train)  # shape: (total_rows,)
-
-    for file in val_files:
-        df = pd.read_csv(file)
-        X = [eval(item) for item in df["X"].values]
-        X_val.extend(X)
-        Y_val.extend(df["y"])
-
-    X_val = np.array(X_val)  # shape: (total_rows, num_features)
-    Y_val = np.array(Y_val)  # shape: (total_rows,)
-
-    return X_train, Y_train, X_val, Y_val
-
-
-X_train, Y_train, X_val, Y_val = create_train_val_pairs(dir, train_ratio=0.8)
 
 print(X_train.shape, Y_train.shape, X_val.shape, Y_val.shape)
 
