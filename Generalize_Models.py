@@ -19,8 +19,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from torch.utils.data import DataLoader
+import joblib
 
-dir = "train"  # adjust this to your dir please
+dir = "train-data/train"  # adjust this to your dir please
 
 
 def create_train_val_pairs(dir, train_ratio):
@@ -115,6 +116,9 @@ cv_scores = np.sqrt(-cross_val_score(
 print(f"CV RMSE: {cv_scores.mean():.2f} ± {cv_scores.std():.2f}")
 
 model.fit(X_train, Y_train)
+save_path = "linear_regression_model_best.pkl"
+joblib.dump(model, save_path)
+
 val_pred = model.predict(X_val)
 plt.figure()
 plt.scatter(Y_val, val_pred)
@@ -125,7 +129,7 @@ plt.show()
 # model = LinearRegression()
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_size=1, hidden_size=64, num_layers=1, output_size=1):
+    def __init__(self, input_size=1, hidden_size=64, num_layers=3, output_size=1):
         super(LSTMRegressor, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
@@ -195,16 +199,28 @@ def train_model(model: nn.Module, train_dataloader, val_dataloader):
 
     print(f"Best model saved to: {"/best_model.npy"}")
 
-model=LSTMRegressor(input_size=1, hidden_size=64, num_layers=1, output_size=1)
-train_model(model, train_dataloader, val_dataloader)
+model2=LSTMRegressor(input_size=1, hidden_size=64, num_layers=1, output_size=1)
+train_model(model2, train_dataloader, val_dataloader)
 
-model.load_state_dict(torch.load("best_model.npy"))
-model.eval()
+model2.load_state_dict(torch.load("best_model.npy"))
+model2.eval()
 with torch.no_grad():
     X_val_tensor = torch.tensor(X_val, dtype=torch.float32).unsqueeze(-1).to(device)
-    val_pred_lstm = model(X_val_tensor).cpu().numpy().flatten()
+    val_pred_lstm = model2(X_val_tensor).cpu().numpy().flatten()
 plt.figure()
 plt.scatter(Y_val, val_pred_lstm)
 # plt.scatter(list(range(len(val_pred))), Y_val, alpha=0.5)
 plt.savefig("lstm.jpg")
 plt.show()
+
+# extract the sequence
+k=0
+seq = X_val[k]               # shape: [seq_len]
+seq_tensor = torch.tensor(seq, dtype=torch.float32).unsqueeze(0).unsqueeze(-1).to(device)
+model2.eval()
+with torch.no_grad():
+    lstm_pred = model2(seq_tensor).cpu().numpy().flatten()  # shape [1] for regression target
+lr_pred = model.predict(seq.reshape(1, -1)).flatten()
+true_y = Y_val[k]
+
+
