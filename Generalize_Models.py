@@ -100,7 +100,7 @@ plt.show()
 # model = LinearRegression()
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_size=1, hidden_size=64, num_layers=3, output_size=1):
+    def __init__(self, input_size=1, hidden_size=32, num_layers=3, output_size=1):
         super(LSTMRegressor, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
@@ -156,7 +156,7 @@ def train_model(model: nn.Module, train_dataloader, val_dataloader):
                 # TODO: save model
                 torch.save(model.state_dict(),"best_model.npy")
         print(f"epoch: {epoch}",f"train_loss: {loss_train}", f"val_loss: {val_loss}")
-    epochs = range(1, 10 + 1)
+    epochs = range(1, 20 + 1)
     plt.figure()
     plt.plot(epochs, train_losses, label="Train Loss")
     plt.plot(epochs, val_losses, label="Val Loss")
@@ -184,14 +184,6 @@ plt.scatter(Y_val, val_pred_lstm)
 plt.savefig("lstm.jpg")
 plt.show()
 
-# extract the sequence
-k=0
-seq = X_val[k]               # shape: [seq_len]
-seq_tensor = torch.tensor(seq, dtype=torch.float32).unsqueeze(0).unsqueeze(-1).to(device)
-model2.eval()
-with torch.no_grad():
-    lstm_pred = model2(seq_tensor).cpu().numpy().flatten()  # shape [1] for regression target
-lr_pred = model.predict(seq.reshape(1, -1)).flatten()
-true_y = Y_val[k]
+
 
 
