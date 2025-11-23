@@ -123,7 +123,7 @@ def train_model(model: nn.Module, train_dataloader, val_dataloader):
     val_losses = []
     train_loss=0
     val_loss=0
-    for epoch in range(10):
+    for epoch in range(20):
         train_loss = 0
         model.train()
         for x, y in train_dataloader:
