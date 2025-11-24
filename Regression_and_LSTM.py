@@ -4,6 +4,8 @@ import glob
 import os
 import torch
 import torch.nn as nn
+import random
+from sklearn.model_selection import cross_val_score
 
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
@@ -13,19 +15,51 @@ import joblib
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+import ast
 
-dir="C:/fall 2025/Data driven Diabetes/train_2018_559.csv" #adjust this to your dir please
-data = pd.read_csv(dir)
-X = data.iloc[:, :-1]
-Y = data.iloc[:, -1]
-# --- Convert X from comma-separated strings to numeric matrix ---
-X_list = data["X"].apply(lambda s: list(map(float, s.split(","))))
-X = np.vstack(X_list.values)     # shape becomes (n_samples, n_features)
+dir="personalised/personalised/train" #adjust this to your dir please
+files_list=[]
+for file in glob.glob(dir + "/*.csv"):
+    files_list.append(file)
+    data = pd.read_csv(file)
+    # Convert string to Python list
+    data["X"] = data["X"].apply(lambda x: ast.literal_eval(x))
 
-# Target
-Y = data["y"].values.astype(float)
-# Split into train/val (80/20)
-X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.2, random_state=42)
+    # Convert list column to NumPy array
+    X = np.array(data["X"].tolist())
+    Y = np.array(data.iloc[:, -1].values)
+
+    # split them into train and val
+    X_train, X_val, Y_train, Y_val = train_test_split(
+        X, Y, test_size=0.33, random_state=42
+    )
+
+    print(X_train.shape, Y_train.shape, X_val.shape, Y_val.shape)
+
+    # 5-fold cross-validated RMSE
+
+    model = LinearRegression()
+    cv_scores = np.sqrt(-cross_val_score(
+        model,
+        np.concatenate([X_train, X_val]),
+        np.concatenate([Y_train, Y_val]),
+        cv=5,
+        scoring='neg_mean_squared_error'
+    ))
+
+    print(f"CV RMSE: {cv_scores.mean():.2f} ± {cv_scores.std():.2f}")
+
+    model.fit(X_train, Y_train)
+    save_path = "linear_regression_model_best_{file}.pkl"
+    joblib.dump(model, save_path)
+
+    val_pred = model.predict(X_val)
+    plt.figure()
+    plt.scatter(Y_val, val_pred)
+    # plt.scatter(list(range(len(val_pred))), Y_val, alpha=0.5)
+    plt.savefig("linear_regression.jpg")
+    plt.show()
+
 
 # Train linear regression
 model1 = LinearRegression()
