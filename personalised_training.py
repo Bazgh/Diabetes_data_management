@@ -159,17 +159,17 @@ for file in glob.glob(dir + "/*.csv"):
     plt.show()
 
     # ---- PLOT: GT vs LR vs LSTM for some indices ----
-    idxs = [0, 5, 10, 20, 50]  # choose whatever indices you like
-    idxs = [idx for idx in idxs if idx < len(Y_val)]  # keep only valid
+    idxs = np.random.choice(Y_val.shape[0], size=20,replace=False)
 
     if len(idxs) > 0:
         plt.figure()
-        plt.plot(idxs, Y_val[idxs], marker='o', label="Ground Truth")
-        plt.plot(idxs, val_pred_lr[idxs], marker='o', label="LR")
-        plt.plot(idxs, val_pred_lstm[idxs], marker='o', label="LSTM")
+        plt.scatter(idxs, Y_val[idxs], label="Ground Truth", s=12)
+        plt.scatter(idxs, val_pred_lr[idxs], label="LR", s=12)
+        plt.scatter(idxs, val_pred_lstm[idxs], label="LSTM", s=12)
+
         plt.xlabel("Validation sample index")
         plt.ylabel("Value")
-        plt.title(f"GT vs LR vs LSTM (some points) – {base}")
+        plt.title(f"GT vs LR vs LSTM (sampled points) – {base}")
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
