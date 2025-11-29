@@ -131,6 +131,7 @@ for file in glob.glob(dir + "/*.csv"):
         if running_val_loss < best_val_loss:
             best_val_loss = running_val_loss
             save_path_best_lstm = f"lstm_model_best_{base}.pth"
+            print(f"Best Lstm model saved to: {save_path_best_lstm}")
             torch.save(lstm_model.state_dict(), save_path_best_lstm)
 
         print(f"{base} | epoch {epoch+1}/{num_epochs} "
