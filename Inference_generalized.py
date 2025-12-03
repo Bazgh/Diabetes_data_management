@@ -10,7 +10,11 @@ from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+from error_grids import *
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+cbg_max=400
+cbg_min=40
 
 dir = "generalised/generalised/test.csv"
 data = pd.read_csv(dir)
@@ -28,7 +32,7 @@ print(Y_test.shape)
 # load Linear regression weights
 Linear_Regression_model = joblib.load("linear_regression_model_best.pkl")
 
-pred_length = [6, 12, 18, 24]  # 30, 60, 120 minutes
+pred_length = [6, 12, 24]  # 30, 60, 120 minutes
 
 
 def Test(model, X_test, Y_test, pred_length):
@@ -69,7 +73,7 @@ def Test(model, X_test, Y_test, pred_length):
     plt.show()  #
     # or: plt.savefig(f"val_scatter_{pred_length}.png")
 
-    idxs = [5, 10, 17, 50, 120, 400, 1000, 5600, 10783, 13000]
+    idxs = [5, 10, 17, 50, 120, 400]
 
     # avoid IndexError if some idx are >= n_test
     valid_idxs = [idx for idx in idxs if idx < n_test]
@@ -116,7 +120,7 @@ class LSTMRegressor(nn.Module):
 
 #load LSTM weights
 lstm_model = LSTMRegressor(input_size=1, hidden_size=64, num_layers=1, output_size=1)
-lstm_model.load_state_dict(torch.load("best_model.npy", map_location=device))  # change name if needed
+lstm_model.load_state_dict(torch.load("best_model_univariate_Generalised.npy", map_location=device))  # change name if needed
 lstm_model.to(device)
 lstm_model.eval()
 
@@ -126,7 +130,7 @@ def Test_LSTM(model, X_test, Y_test, pred_length):
     # create containers with fixed length
     n_test = len(X_test)
 
-    Y_true = np.zeros((n_test, pred_length))  # ground truth outputs      [n_test,pred_length]
+    Y_true = np.zeros((n_test, pred_length))
     Y_pred_lstm = np.zeros((n_test, pred_length))  # LSTM predictions          [n_test,pred_length]
 
     for i in range(n_test):
@@ -146,8 +150,81 @@ def Test_LSTM(model, X_test, Y_test, pred_length):
 
     # compute MSE
     mse = mean_squared_error(Y_true, Y_pred_lstm)
-    print(f"LSTM Test MSE (pred_length={pred_length}):", mse)
+    rmse= np.sqrt(mse)
+    print(f"LSTM Test MSE (pred_length={pred_length}):", rmse)
+    # === SAVE CSV WHEN pred_length == 24 ===
+    if pred_length == 24:
+        # column names for ground truth and predictions
+        cols_true = [f"y_{i}" for i in range(pred_length)]  # Y0 ... Y23
+        cols_pred = [f"pred_{i}" for i in range(pred_length)]  # Y_pred0 ... Y_pred23
 
+        # concatenate true and predicted along axis 1: shape (n_test, 48)
+        data_mat = np.hstack([Y_true, Y_pred_lstm])
+
+        df = pd.DataFrame(data_mat, columns=cols_true + cols_pred)
+        csv_name = "lstm_Y_true_and_predictions_len24.csv"
+        df.to_csv(csv_name, index=False)
+        print(f"Saved CSV to: {csv_name}")
+    """
+    # ---- Clarke Error Grid scatter plot (fast) ----
+    Y_true = (Y_true * (cbg_max - cbg_min)) + cbg_min            # original scale
+    Y_pred_lstm = (Y_pred_lstm * (cbg_max - cbg_min)) + cbg_min  # original scale
+
+    act = Y_true.flatten()
+    pred = Y_pred_lstm.flatten()
+    zones = clarke_error_zone_detailed(act, pred)
+
+    zone_colors = {
+        0: "green",  # Zone A — clinically accurate
+        1: "blue",  # Zone B — minor errors (lower)
+        2: "blue",  # Zone B — minor errors (upper)
+        3: "orange",  # Zone C
+        4: "orange",
+        5: "red",  # Zone D
+        6: "red",
+        7: "purple",  # Zone E
+        8: "purple"
+    }
+
+    plt.figure(figsize=(6, 6))
+
+    # Plot all points for each zone in a single scatter call
+    for z, color in zone_colors.items():
+        mask = (zones == z)
+        if not np.any(mask):
+            continue  # skip empty zones
+        plt.scatter(
+            act[mask],
+            pred[mask],
+            color=color,
+            s=5,
+            alpha=0.5,
+        )
+
+    # Diagonal reference line
+    min_val = min(act.min(), pred.min())
+    max_val = max(act.max(), pred.max())
+    plt.plot([min_val, max_val], [min_val, max_val], 'k--')
+
+    plt.xlabel("Actual Glucose")
+    plt.ylabel("Predicted Glucose")
+    plt.title(f"Clarke Error Grid — Predictions (pred_length={pred_length})")
+
+    # Legend (manual, one entry per zone group)
+    from matplotlib.lines import Line2D
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='green', label='Zone A'),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', label='Zone B'),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', label='Zone C'),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='red', label='Zone D'),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='purple', label='Zone E')
+    ]
+    plt.legend(handles=legend_elements)
+
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+    
     # ------- SCATTER PLOT: True vs Predicted -------
     plt.figure()
     plt.scatter(Y_true.flatten(), Y_pred_lstm.flatten(), alpha=0.5)  # <-- MANY POINTS
@@ -189,6 +266,9 @@ def Test_LSTM(model, X_test, Y_test, pred_length):
         plt.show()
 
         print("Saved LSTM plot to:", save_name_lstm)
+"""
 
 for i, length in enumerate(pred_length):
     Test_LSTM(lstm_model, X_test, Y_test, length)
+
+
