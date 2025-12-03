@@ -53,8 +53,6 @@ class LastValueBaseline:
 
 
 data_dir = "personalised/personalised/train"
-
-data_dir = "personalised/personalised/train"
 save_root = "models"
 
 os.makedirs(save_root, exist_ok=True)
@@ -137,8 +135,21 @@ for file in glob.glob(Test_data_path + "*.csv"):
 
         rmse = np.sqrt(mean_squared_error(y_true_all, y_pred))
         print(f"Test RMSE (pred_len={len_pred}):", rmse)
-        valid_idxs = [idx for idx in idxs if idx < n_test]
+        # === SAVE CSV WHEN pred_length == 24 ===
+        if len_pred == 24:
+            # column names for ground truth and predictions
+            cols_true = [f"y_{i}" for i in range(len_pred)]  # Y0 ... Y23
+            cols_pred = [f"pred_{i}" for i in range(len_pred)]  # Y_pred0 ... Y_pred23
 
+            # concatenate true and predicted along axis 1: shape (n_test, 48)
+            data_mat = np.hstack([y_true_all, y_pred])
+
+            df = pd.DataFrame(data_mat, columns=cols_true + cols_pred)
+            csv_name = f"last_value_Y_true_and_predictions_len24_{base}.csv"
+            df.to_csv(csv_name, index=False)
+            print(f"Saved CSV to: {csv_name}")
+        valid_idxs = [idx for idx in idxs if idx < n_test]
+        """
         for i, idx in enumerate(valid_idxs):  # sequence index to visualize
             t = np.arange(len_pred)  # time steps 0..pred_length-1
 
@@ -160,3 +171,4 @@ for file in glob.glob(Test_data_path + "*.csv"):
             plt.show()
 
             print("Saved plot to:", save_name)
+        """
